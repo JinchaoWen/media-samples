@@ -18,6 +18,7 @@ package com.example.android.pictureinpicture
 
 import android.app.PictureInPictureParams
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Bundle
@@ -28,6 +29,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.text.util.Linkify
 import android.util.Rational
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -111,11 +113,13 @@ class MovieActivity : AppCompatActivity() {
 
         // Set up the video; it automatically starts.
         binding.movie.setMovieListener(movieListener)
+        println("++++ MovieActivity onCreate")
     }
 
     override fun onStart() {
         super.onStart()
         initializeMediaSession()
+        println("++++ MovieActivity onStart")
     }
 
     private fun initializeMediaSession() {
@@ -143,12 +147,18 @@ class MovieActivity : AppCompatActivity() {
         )
     }
 
+    override fun onPause() {
+        super.onPause()
+        println("++++ MovieActivity onPause")
+    }
+
     override fun onStop() {
         super.onStop()
         // On entering Picture-in-Picture mode, onPause is called, but not onStop.
         // For this reason, this is the place where we should pause the video playback.
         binding.movie.pause()
         session.release()
+        println("++++ MovieActivity onStop")
     }
 
     override fun onRestart() {
@@ -157,6 +167,7 @@ class MovieActivity : AppCompatActivity() {
             // Show the video controls so the video can be easily resumed.
             binding.movie.showControls()
         }
+        println("++++ MovieActivity onRestart")
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -186,9 +197,25 @@ class MovieActivity : AppCompatActivity() {
         }
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // When setAutoEnterEnabled is enabled, you don’t need to explicitly call enterPictureInPictureMode in onUserLeaveHint.
+//        enterPictureInPictureMode(updatePictureInPictureParams())
+    }
+
+    override fun onBackPressed() {
+        enterPictureInPictureMode(updatePictureInPictureParams())
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        println("++++ MovieActivity onDestroy")
+    }
+
     private fun updatePictureInPictureParams(): PictureInPictureParams {
         // Calculate the aspect ratio of the PiP screen.
         val aspectRatio = Rational(binding.movie.width, binding.movie.height)
+        println("++++ width = ${binding.movie.width}  height = ${binding.movie.height}   aspectRatio = $aspectRatio")
         // The movie view turns into the picture-in-picture mode.
         val visibleRect = Rect()
         binding.movie.getGlobalVisibleRect(visibleRect)
@@ -209,7 +236,11 @@ class MovieActivity : AppCompatActivity() {
      * Enters Picture-in-Picture mode.
      */
     private fun minimize() {
-        enterPictureInPictureMode(updatePictureInPictureParams())
+        if (this.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+            enterPictureInPictureMode(updatePictureInPictureParams())
+        } else {
+            Toast.makeText(this.applicationContext, "该设备不支持画中画", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
